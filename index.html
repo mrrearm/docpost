@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocPost</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .header {
+      font-size: 2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .textarea, .title-box {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border-radius: 5px;
+      border: none;
+      font-size: 1rem;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    button, select, input[type="file"] {
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #themeSelector {
+      margin-left: auto;
+    }
+    .note-list {
+      margin-top: 2rem;
+    }
+    .note-entry {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .formatting-bar button {
+      padding: 0.25rem 0.5rem;
+      margin: 0 0.25rem;
+      font-size: 0.9rem;
+    }
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body id="themeBody">
+  <div class="header" id="appTitle">DocPost</div>
+  <input type="text" id="titleInput" class="title-box" placeholder="Titolo della nota..." />
+  <div class="formatting-bar">
+    <button onclick="formatText('bold')">B</button>
+    <button onclick="formatText('italic')">I</button>
+    <button onclick="formatText('underline')">U</button>
+    <button onclick="formatText('strikeThrough')">S</button>
+    <button onclick="formatText('insertOrderedList')">OL</button>
+    <button onclick="formatText('insertUnorderedList')">UL</button>
+    <button onclick="insertHeading('h1')">H1</button>
+    <button onclick="insertHeading('h2')">H2</button>
+    <button onclick="insertImage()">🖼️</button>
+    <button onclick="insertTable()">📊</button>
+    <button onclick="insertCode()">{ }</button>
+    <button onclick="insertSup()">X<sup>2</sup></button>
+    <button onclick="insertSub()">X<sub>2</sub></button>
+    <button onclick="insertSpoiler()">SPOILER</button>
+    <button onclick="resizeText()">Aa</button>
+  </div>
+  <div contenteditable="true" id="textInput" class="textarea" style="min-height:200px;"></div>
+  <div class="controls">
+    <button onclick="newNote()">Nuova Nota</button>
+    <button onclick="saveNote()">Salva</button>
+    <button onclick="downloadNote()">Scarica TXT</button>
+    <button onclick="exportHTML()">Esporta HTML</button>
+    <button onclick="exportMarkdown()">Esporta MD</button>
+    <input type="file" id="fileInput" accept=".txt,.html,.md" onchange="loadNote()" />
+    <select id="themeSelector" onchange="changeTheme(this.value)">
+      <option value="dark">Nero</option>
+      <option value="light">Bianco</option>
+      <option value="blue">Blu</option>
+      <option value="red">Rosso</option>
+      <option value="green">Verde</option>
+      <option value="yellow">Giallo</option>
+      <option value="brown">Marrone</option>
+    </select>
+  </div>
+  <div class="note-list" id="noteList"></div>
+
+  <script>
+    const themes = {
+      dark:   { bg: "#111",     color: "#fff",      title: "#fff" },
+      light:  { bg: "#fff",     color: "#000",      title: "#000" },
+      blue:   { bg: "#001F3F",  color: "#7FDBFF",   title: "#7FDBFF" },
+      red:    { bg: "#85144b",  color: "#FF4136",   title: "#FF4136" },
+      green:  { bg: "#2ECC40",  color: "#001F00",   title: "#001F00" },
+      yellow: { bg: "#FFDC00",  color: "#111",      title: "#111" },
+      brown:  { bg: "#8B4513",  color: "#FFF8DC",   title: "#FFF8DC" }
+    };
+
+    function changeTheme(theme) {
+      const body = document.getElementById("themeBody");
+      const title = document.getElementById("appTitle");
+      const t = themes[theme];
+      body.style.backgroundColor = t.bg;
+      body.style.color = t.color;
+      title.style.color = t.title;
+      document.getElementById("titleInput").style.backgroundColor = t.bg;
+      document.getElementById("titleInput").style.color = t.color;
+      document.getElementById("textInput").style.backgroundColor = t.bg;
+      document.getElementById("textInput").style.color = t.color;
+    }
+
+    function formatText(command) {
+      document.execCommand(command, false, null);
+    }
+
+    function insertHeading(tag) {
+      document.execCommand("formatBlock", false, tag);
+    }
+
+    function insertImage() {
+      const url = prompt("URL dell'immagine:");
+      if (url) document.execCommand("insertImage", false, url);
+    }
+
+    function insertTable() {
+      const html = "<table border='1'><tr><td>Cell</td><td>Cell</td></tr></table>";
+      document.execCommand("insertHTML", false, html);
+    }
+
+    function insertCode() {
+      const html = "<pre><code>codice qui</code></pre>";
+      document.execCommand("insertHTML", false, html);
+    }
+
+    function insertSup() {
+      document.execCommand("insertHTML", false, "<sup>testo</sup>");
+    }
+
+    function insertSub() {
+      document.execCommand("insertHTML", false, "<sub>testo</sub>");
+    }
+
+    function insertSpoiler() {
+      const html = "<span style='background-color:black; color:black;' onclick='this.style.color=\"white\";'>spoiler</span>";
+      document.execCommand("insertHTML", false, html);
+    }
+
+    function resizeText() {
+      const size = prompt("Inserisci una dimensione (es. 12px, 1.5em):");
+      if (size) document.execCommand("fontSize", false, 7);
+      let el = window.getSelection().focusNode.parentNode;
+      el.style.fontSize = size;
+    }
+
+    function newNote() {
+      document.getElementById("titleInput").value = "";
+      document.getElementById("textInput").innerHTML = "";
+    }
+
+    function saveNote() {
+      const title = document.getElementById("titleInput").value || "Senza titolo";
+      const content = document.getElementById("textInput").innerHTML;
+      localStorage.setItem(title, content);
+      updateNoteList();
+    }
+
+    function updateNoteList() {
+      const noteList = document.getElementById("noteList");
+      noteList.innerHTML = "<h3>Archivio Note:</h3>";
+      Object.keys(localStorage).forEach(key => {
+        const div = document.createElement("div");
+        div.className = "note-entry";
+        div.textContent = key;
+        div.onclick = () => {
+          document.getElementById("titleInput").value = key;
+          document.getElementById("textInput").innerHTML = localStorage.getItem(key);
+        };
+        noteList.appendChild(div);
+      });
+    }
+
+    function downloadNote() {
+      const title = document.getElementById("titleInput").value || "nota";
+      const text = document.getElementById("textInput").innerText;
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = title + ".txt";
+      link.click();
+    }
+
+    function exportHTML() {
+      const title = document.getElementById("titleInput").value || "nota";
+      const content = document.getElementById("textInput").innerHTML;
+      const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body><h1>${title}</h1>${content}</body></html>`;
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = title + ".html";
+      link.click();
+    }
+
+    function exportMarkdown() {
+      const title = document.getElementById("titleInput").value || "nota";
+      const text = document.getElementById("textInput").innerText;
+      const blob = new Blob([`# ${title}\\n\\n${text}`], { type: "text/markdown;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = title + ".md";
+      link.click();
+    }
+
+    function loadNote() {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const content = e.target.result;
+        const title = file.name.split(".")[0];
+        document.getElementById("titleInput").value = title;
+        document.getElementById("textInput").innerText = content;
+      };
+      reader.readAsText(file, "UTF-8");
+    }
+
+    updateNoteList();
+    changeTheme("dark");
+  </script>
+</body>
+</html>
